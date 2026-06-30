@@ -59,37 +59,37 @@ for i in range(SAMPLE_SIZE):
         squarewave_list.append(-32767)
 squarewave = np.array(squarewave_list, dtype=np.int16)
 
+
+
+
 class KickDrum:
     # A bass drum instrument built from a few pitched notes and a pitch-drop LFO.
     def __init__(self, synth):
         # `synth`: the synthio synthesizer instance used to play kick notes.
         # This constructor creates internal note objects that are retained for reuse.
         self.synth = synth
-        
-        
 
-        # Three short envelope notes stacked to create a thick kick sound.
-        # Envelope parameters:
-        # - attack_time: time in seconds to reach full level (0.0 means immediate)
-        # - decay_time: time in seconds to fall from attack level to sustain level
-        # - release_time: time in seconds to fall from sustain level to zero after note release
-        # - attack_level: peak level reached at the end of the attack phase
-        # - sustain_level: level held after decay until release
-        
-
-    
-    
     def play(self, synth=None):
         if synth is None:
             synth = self.synth
 
         # Create a fresh LFO for this note (not reused)
+        # Pitch bend envelope: a short downward sweep for kick impact.
+        # The LFO is used as a bend source for each note.
         lfo = synthio.LFO(waveform=downwave)
         lfo.once = True
         lfo.offset = 0.33
         lfo.scale = 0.3
         lfo.rate = 20
         lfo.retrigger()
+
+        # One short envelope note creates a kick sound.
+        # Envelope parameters:
+        # - attack_time: time in seconds to reach full level (0.0 means immediate)
+        # - decay_time: time in seconds to fall from attack level to sustain level
+        # - release_time: time in seconds to fall from sustain level to zero after note release
+        # - attack_level: peak level reached at the end of the attack phase
+        # - sustain_level: level held after decay until release
 
         amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.075, release_time=0, attack_level=1, sustain_level=0)
         note = synthio.Note(frequency=53, envelope=amp_env, waveform=sinwave2, bend=lfo)
@@ -98,37 +98,16 @@ class KickDrum:
 
 class Snare:
     # A snare instrument using noise-based waveforms and a bright low-pass filter.
-    def __init__(self, synth, runRatio=1.0):
+    def __init__(self, synth):
         # `synth`: the synthio synthesizer instance that will play the snare notes.
-        # `runRatio`: the duration of the snare sound in seconds, relative to the default.
         # The constructor builds noise-based note objects and stores them internally.
         self.synth = synth
         
-        # Pitch drop LFO used to add snare hit character.
-        self.lfo = synthio.LFO(waveform=downwave)
-        self.lfo.once = True
-        self.lfo.offset = 0.33
-        self.lfo.scale = 0.3
-        self.lfo.rate = 20
-
-        self.runRatio = runRatio
-
         # Noise-based notes to give the snare its body and snap.
         # `frequency` is the base pitch of the note in Hz.
         # `waveform` selects the sample table used for the sound.
         # `bend` applies the LFO pitch sweep.
-        self.amp_env1 = synthio.Envelope(attack_time=0.0, decay_time=0.115*runRatio, release_time=0, attack_level=1, sustain_level=0)
-        self.note1 = synthio.Note(frequency=90, envelope=self.amp_env1, waveform=w1, bend=self.lfo)
-
-        self.amp_env2 = synthio.Envelope(attack_time=0.0, decay_time=0.095*runRatio, release_time=0, attack_level=1, sustain_level=0)
-        self.note2 = synthio.Note(frequency=135, envelope=self.amp_env2, waveform=w2, bend=self.lfo)
-
-        self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=0.115*runRatio, release_time=0, attack_level=1, sustain_level=0)
-        self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=w2, bend=self.lfo)
-
-    def setLPF(self, fr):
-        # Placeholder for filter control (not supported in this version of synthio)
-        pass
+        
 
     def play(self, synth=None):
         
@@ -136,6 +115,7 @@ class Snare:
             synth = self.synth
 
         # Create a fresh LFO for this note (not reused)
+        # Pitch drop LFO used to add snare hit character.
         lfo = synthio.LFO(waveform=downwave)
         lfo.once = True
         lfo.offset = 0.33
@@ -143,7 +123,7 @@ class Snare:
         lfo.rate = 20
         lfo.retrigger()
 
-        amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.115*self.runRatio, release_time=0, attack_level=1, sustain_level=0)
+        amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.115, release_time=0, attack_level=1, sustain_level=0)
         note = synthio.Note(frequency=90, envelope=amp_env, waveform=w1, bend=lfo)
 
 
@@ -177,16 +157,11 @@ class Cowbell:
         # `runRatio`: the duration of the cowbell sound in seconds, relative to the default.
         self.synth = synth
 
-        self.lfo = synthio.LFO(waveform=downwave)
-        self.lfo.once = True
-        self.lfo.offset = 0.33
-        self.lfo.scale = 0.3
-        self.lfo.rate = 20
+        
 
 
         # A single note for the cowbell.
-        self.amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.055, release_time=0, attack_level=1, sustain_level=0)
-        self.note = synthio.Note(frequency=540, envelope=self.amp_env, waveform=squarewave, bend=self.lfo)
+        
 
     def play(self, synth=None):
         
