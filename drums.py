@@ -63,47 +63,47 @@ class KickDrum:
     # A bass drum instrument built from a few pitched notes and a pitch-drop LFO.
     def __init__(self, synth):
         # `synth`: the synthio synthesizer instance used to play kick notes.
+        # This constructor creates internal note objects that are retained for reuse.
         self.synth = synth
         
-        # Pitch bend envelope: a short downward sweep for kick impact.
-        self.lfo = synthio.LFO(waveform=downwave)
-        self.lfo.once = True
-        self.lfo.offset = 0.33
-        self.lfo.scale = 0.3
-        self.lfo.rate = 20
+        
 
-        # Note definitions used to create fresh notes on every play.
-        self.note_template = [
-            (53, sinwave2, 0.075),
-            (72, sinwave1, 0.055),
-            (41, sinwave2, 0.095),
-        ]
+        # Three short envelope notes stacked to create a thick kick sound.
+        # Envelope parameters:
+        # - attack_time: time in seconds to reach full level (0.0 means immediate)
+        # - decay_time: time in seconds to fall from attack level to sustain level
+        # - release_time: time in seconds to fall from sustain level to zero after note release
+        # - attack_level: peak level reached at the end of the attack phase
+        # - sustain_level: level held after decay until release
+        
 
-    def _make_note(self, frequency, waveform, decay_time):
-        envelope = synthio.Envelope(attack_time=0.0, decay_time=decay_time, release_time=0, attack_level=1, sustain_level=0)
-        return synthio.Note(frequency=frequency, envelope=envelope, waveform=waveform, bend=self.lfo)
-
-    def setLPF(self, fr):
-        # Placeholder for filter control (not supported in this version of synthio)
-        pass
+    
     
     def play(self, synth=None):
-        # Trigger the kick drum sound by creating fresh notes each time.
         if synth is None:
             synth = self.synth
-        self.lfo.retrigger()
-        notes = tuple(self._make_note(freq, wave, decay) for freq, wave, decay in self.note_template)
-        synth.press(notes)
+
+        # Create a fresh LFO for this note (not reused)
+        lfo = synthio.LFO(waveform=downwave)
+        lfo.once = True
+        lfo.offset = 0.33
+        lfo.scale = 0.3
+        lfo.rate = 20
+        lfo.retrigger()
+
+        amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.075, release_time=0, attack_level=1, sustain_level=0)
+        note = synthio.Note(frequency=53, envelope=amp_env, waveform=sinwave2, bend=lfo)
+
+        synth.press((note,))
 
 class Snare:
-    # A snare instrument using noise-based waveforms and a bright sound.
+    # A snare instrument using noise-based waveforms and a bright low-pass filter.
     def __init__(self, synth, runRatio=1.0):
         # `synth`: the synthio synthesizer instance that will play the snare notes.
-        # `runRatio`: scales the decay time of the snare envelopes.
+        # `runRatio`: the duration of the snare sound in seconds, relative to the default.
+        # The constructor builds noise-based note objects and stores them internally.
         self.synth = synth
         
-        self.runRatio = runRatio
-
         # Pitch drop LFO used to add snare hit character.
         self.lfo = synthio.LFO(waveform=downwave)
         self.lfo.once = True
@@ -111,77 +111,70 @@ class Snare:
         self.lfo.scale = 0.3
         self.lfo.rate = 20
 
-        self.note_template = [
-            (90, w1, 0.115 * self.runRatio),
-            (135, w2, 0.095 * self.runRatio),
-            (165, w2, 0.115 * self.runRatio),
-        ]
+        self.runRatio = runRatio
 
-    def _make_note(self, frequency, waveform, decay_time):
-        envelope = synthio.Envelope(attack_time=0.0, decay_time=decay_time, release_time=0, attack_level=1, sustain_level=0)
-        return synthio.Note(frequency=frequency, envelope=envelope, waveform=waveform, bend=self.lfo)
+        # Noise-based notes to give the snare its body and snap.
+        # `frequency` is the base pitch of the note in Hz.
+        # `waveform` selects the sample table used for the sound.
+        # `bend` applies the LFO pitch sweep.
+        self.amp_env1 = synthio.Envelope(attack_time=0.0, decay_time=0.115*runRatio, release_time=0, attack_level=1, sustain_level=0)
+        self.note1 = synthio.Note(frequency=90, envelope=self.amp_env1, waveform=w1, bend=self.lfo)
+
+        self.amp_env2 = synthio.Envelope(attack_time=0.0, decay_time=0.095*runRatio, release_time=0, attack_level=1, sustain_level=0)
+        self.note2 = synthio.Note(frequency=135, envelope=self.amp_env2, waveform=w2, bend=self.lfo)
+
+        self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=0.115*runRatio, release_time=0, attack_level=1, sustain_level=0)
+        self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=w2, bend=self.lfo)
 
     def setLPF(self, fr):
         # Placeholder for filter control (not supported in this version of synthio)
         pass
 
     def play(self, synth=None):
-        # Trigger the snare sound using fresh notes.
+        
         if synth is None:
             synth = self.synth
-        self.lfo.retrigger()
-        notes = tuple(self._make_note(freq, wave, decay) for freq, wave, decay in self.note_template)
-        synth.press(notes)
+
+        # Create a fresh LFO for this note (not reused)
+        lfo = synthio.LFO(waveform=downwave)
+        lfo.once = True
+        lfo.offset = 0.33
+        lfo.scale = 0.3
+        lfo.rate = 20
+        lfo.retrigger()
+
+        amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.115*self.runRatio, release_time=0, attack_level=1, sustain_level=0)
+        note = synthio.Note(frequency=90, envelope=amp_env, waveform=w1, bend=lfo)
+
+
+        synth.press((note,))
         
 class HighHat:
-    # A hi-hat instrument using noise for a crisp attack.
-    def __init__(self, synth, t=0.115):
-        # `synth`: the synthio synthesizer instance that will play the hi-hat notes.
-        # `t`: the decay time in seconds for the hi-hat envelope.
-        self.synth = synth
-        self.t = t
+      def __init__(self, synth, t=0.115):
+          self.synth = synth
+          self.t = t
 
-        self.lfo = synthio.LFO(waveform=downwave)
-        self.lfo.once = True
-        self.lfo.offset = 0.33
-        self.lfo.scale = 0.3
-        self.lfo.rate = 20
+      def setHPF(self, fr):
+          pass
 
-        self.note_template = [
-            (90, noisewave, t),
-            (135, noisewave, t - 0.02),
-            (165, noisewave, t),
-        ]
+      def setTime(self, t):
+          self.t = t
 
-    def _make_note(self, frequency, waveform, decay_time):
-        envelope = synthio.Envelope(attack_time=0.0, decay_time=decay_time, release_time=0, attack_level=1, sustain_level=0)
-        return synthio.Note(frequency=frequency, envelope=envelope, waveform=waveform, bend=self.lfo)
+      def play(self, synth=None):
+          if synth is None:
+              synth = self.synth
 
-    def setHPF(self, fr):
-        # Placeholder for filter control (not supported in this version of synthio)
-        pass
+          amp_env = synthio.Envelope(attack_time=0.0, decay_time=self.t, release_time=0, attack_level=1, sustain_level=0)
+          note = synthio.Note(frequency=90, envelope=amp_env, waveform=noisewave)
 
-    def setTime(self, t):
-        # Update the hi-hat envelope decay time.
-        self.t = t
-        self.note_template = [
-            (90, noisewave, t),
-            (135, noisewave, t - 0.02),
-            (165, noisewave, t),
-        ]
-        
-    def play(self, synth=None):
-        # Play the hi-hat by pressing fresh note objects.
-        if synth is None:
-            synth = self.synth
-        self.lfo.retrigger()
-        notes = tuple(self._make_note(freq, wave, decay) for freq, wave, decay in self.note_template)
-        synth.press(notes)
+          synth.press((note,))
+
 
 class Cowbell:
     # A cowbell instrument using a single note with a short decay.
     def __init__(self, synth):
         # `synth`: the synthio synthesizer instance that will play the cowbell.
+        # `runRatio`: the duration of the cowbell sound in seconds, relative to the default.
         self.synth = synth
 
         self.lfo = synthio.LFO(waveform=downwave)
@@ -190,17 +183,28 @@ class Cowbell:
         self.lfo.scale = 0.3
         self.lfo.rate = 20
 
-        self.note_template = (540, squarewave, 0.055)
 
-    def _make_note(self, frequency, waveform, decay_time):
-        envelope = synthio.Envelope(attack_time=0.0, decay_time=decay_time, release_time=0, attack_level=1, sustain_level=0)
-        return synthio.Note(frequency=frequency, envelope=envelope, waveform=waveform, bend=self.lfo)
+        # A single note for the cowbell.
+        self.amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.055, release_time=0, attack_level=1, sustain_level=0)
+        self.note = synthio.Note(frequency=540, envelope=self.amp_env, waveform=squarewave, bend=self.lfo)
 
     def play(self, synth=None):
-        # Play the cowbell by pressing a fresh note object.
+        
         if synth is None:
             synth = self.synth
-        self.lfo.retrigger()
-        frequency, waveform, decay = self.note_template
-        synth.press((self._make_note(frequency, waveform, decay),))
+
+        # Create a fresh LFO for this note
+        lfo = synthio.LFO(waveform=downwave)
+        lfo.once = True
+        lfo.offset = 0.33
+        lfo.scale = 0.3
+        lfo.rate = 20
+        lfo.retrigger()
+
+        # Create the cowbell note
+        amp_env = synthio.Envelope(attack_time=0.0, decay_time=0.055, release_time=0, attack_level=1, sustain_level=0)
+        note = synthio.Note(frequency=540, envelope=amp_env, waveform=squarewave, bend=lfo)
+
+        # Release all and press the new note
+        synth.press((note,))
         
